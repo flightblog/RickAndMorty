@@ -19,15 +19,6 @@ xcodebuild -project RickAndMorty.xcodeproj -scheme RickAndMorty \
 
 Targets: `RickAndMorty` (app), `RickAndMortyTests` (32 unit tests), and `RickAndMortyUITests` (10 UI tests, which exercise the real API end to end). Deployment target is iOS 17.0 — the UI uses `NavigationStack`, `.task(id:)`, and `ContentUnavailableView`.
 
-## CI
-
-`.github/workflows/ci.yml` runs on every push and pull request to `main`, on `macos-15` with Xcode 26.0.1 pinned (the image defaults to 16.4, and the `iPhone 17` simulator needs an iOS 26 runtime).
-
-Two jobs, split deliberately:
-
-- **Unit tests** — the 32 hermetic tests. These gate the build.
-- **UI tests (live API)** — the 10 end-to-end tests. These run on pull requests and manual `workflow_dispatch` runs only, not on pushes to `main`: they drive a simulator against the live API and take about four minutes, against roughly ten seconds for the unit suite. They are also marked `continue-on-error`, because they depend on `rickandmortyapi.com` being up: a red X here can mean the API is slow, not that the app regressed. The job pings the API first and emits a warning annotation if it is unreachable, so the logs distinguish the two cases. Check it before assuming a regression.
-
 ## Architecture
 
 **MVVM**, no third-party dependencies. The API surface here is small enough that adding a networking library or DI framework would be over-engineering; `URLSession` + `async/await` covers it cleanly.
@@ -37,6 +28,15 @@ Two jobs, split deliberately:
 - **Features/Search/** — `CharacterListViewModel` (`@MainActor`, `ObservableObject`) owns `searchText`, `characters`, `isLoading`, `errorMessage`. `CharacterListView` drives it via `.task(id: searchText)`, which SwiftUI automatically cancels and restarts whenever the text changes — that's what gives us "search updates on every keystroke" without ever racing a stale response against a fresh one. Results render in a `LazyVGrid`. Before the first search, the screen shows a custom `ContentUnavailableView` ("Find a character") rather than an empty grid; it uses the `label:` closure form so tinting the portal icon doesn't also recolor the title and description. A no-match search falls through to `ContentUnavailableView.search(text:)` instead, so "nothing yet" and "nothing found" read differently.
 - **Features/Detail/** — the detail screen; `type` only renders when non-empty per the spec. `CharacterShareItem` + `ImageLoader` back the share button.
 - **Features/Theme/** — `PortalTheme` holds the palette and `PortalBackground` wraps the space artwork, so the theming isn't color literals scattered through the views.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push and pull request to `main`, on `macos-15` with Xcode 26.0.1 pinned (the image defaults to 16.4, and the `iPhone 17` simulator needs an iOS 26 runtime).
+
+Two jobs, split deliberately:
+
+- **Unit tests** — the 32 hermetic tests. These gate the build.
+- **UI tests (live API)** — the 10 end-to-end tests. These run on pull requests and manual `workflow_dispatch` runs only, not on pushes to `main`: they drive a simulator against the live API and take about four minutes, against roughly ten seconds for the unit suite. They are also marked `continue-on-error`, because they depend on `rickandmortyapi.com` being up: a red X here can mean the API is slow, not that the app regressed. The job pings the API first and emits a warning annotation if it is unreachable, so the logs distinguish the two cases. Check it before assuming a regression.
 
 ## What I'd add with more time
 
