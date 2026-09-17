@@ -1,5 +1,7 @@
 # Rick and Morty Character Search
 
+[![CI](https://github.com/flightblog/RickAndMorty/actions/workflows/ci.yml/badge.svg)](https://github.com/flightblog/RickAndMorty/actions/workflows/ci.yml)
+
 An iOS app to search characters from the [Rick and Morty API](https://rickandmortyapi.com), built with SwiftUI, async/await, and the MVVM pattern.
 
 ## Getting it running
@@ -16,6 +18,19 @@ xcodebuild -project RickAndMorty.xcodeproj -scheme RickAndMorty \
 ```
 
 Targets: `RickAndMorty` (app), `RickAndMortyTests` (32 unit tests), and `RickAndMortyUITests` (10 UI tests, which exercise the real API end to end). Deployment target is iOS 17.0 — the UI uses `NavigationStack`, `.task(id:)`, and `ContentUnavailableView`.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push and pull request to `main`, on `macos-15` with Xcode 26.0.1 pinned (the image defaults to 16.4, and the `iPhone 17` simulator needs an iOS 26 runtime).
+
+Two jobs, split deliberately:
+
+- **Unit tests** — the 32 hermetic tests. These gate the build.
+- **UI tests (live API)** — the 10 end-to-end tests. Marked `continue-on-error`, because they depend on `rickandmortyapi.com` being up: a red X here can mean the API is slow, not that the app regressed. The job pings the API first and emits a warning annotation if it is unreachable, so the logs distinguish the two cases. Check it before assuming a regression.
+
+Both jobs upload their `.xcresult` bundle as an artifact (7-day retention).
+
+GitHub's runners only ship iOS 18.x and 26.x simulators, so CI covers the iOS 26 transition path. The iOS 17.4 fallback described below is verified locally, not in CI.
 
 ## Architecture
 
