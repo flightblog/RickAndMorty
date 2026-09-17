@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT: RickAndMorty.xcodeproj
+  SCHEME: RickAndMorty
+  DESTINATION: 'platform=iOS Simulator,name=iPhone 17,OS=26.0'
+
+jobs:
+  unit-tests:
+    name: Unit tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode_26.0.1.app
+
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination "$DESTINATION" \
+            -only-testing:RickAndMortyTests \
+            -resultBundlePath UnitTests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: UnitTests.xcresult
+          retention-days: 7
+
+  ui-tests:
+    name: UI tests (live API)
+    runs-on: macos-15
+    # These tests call the real rickandmortyapi.com. A failure here can mean the
+    # API is slow or down rather than a regression, so it reports without
+    # failing the build. Check the logs before assuming the app is broken.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: sudo xcode-select -s /Applications/Xcode_26.0.1.app
+
+      - name: Check API reachability
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+            https://rickandmortyapi.com/api/character?name=rick) || code=000
+          echo "rickandmortyapi.com returned HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::Live API unreachable (HTTP $code); UI test failures below are likely environmental."
+          fi
+
+      - name: Run UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination "$DESTINATION" \
+            -only-testing:RickAndMortyUITests \
+            -resultBundlePath UITests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: UITests.xcresult
+          retention-days: 7
