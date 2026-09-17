@@ -28,10 +28,6 @@ Two jobs, split deliberately:
 - **Unit tests** — the 32 hermetic tests. These gate the build.
 - **UI tests (live API)** — the 10 end-to-end tests. These run on pull requests and manual `workflow_dispatch` runs only, not on pushes to `main`: they drive a simulator against the live API and take about four minutes, against roughly ten seconds for the unit suite. They are also marked `continue-on-error`, because they depend on `rickandmortyapi.com` being up: a red X here can mean the API is slow, not that the app regressed. The job pings the API first and emits a warning annotation if it is unreachable, so the logs distinguish the two cases. Check it before assuming a regression.
 
-Both jobs upload their `.xcresult` bundle as an artifact (7-day retention).
-
-GitHub's runners only ship iOS 18.x and 26.x simulators, so CI covers the iOS 26 transition path. The app's iOS 17 fallback for the hero-image transition is verified locally against an iOS 17.4 simulator, not in CI.
-
 ## Architecture
 
 **MVVM**, no third-party dependencies. The API surface here is small enough that adding a networking library or DI framework would be over-engineering; `URLSession` + `async/await` covers it cleanly.
