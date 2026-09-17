@@ -51,6 +51,10 @@ jobs:
   ui-tests:
     name: UI tests (live API)
     runs-on: macos-15
+    # PRs and manual runs only: these drive a simulator against the live API and
+    # take ~4 minutes, versus ~10s for the unit suite, so they don't run on
+    # every push to main.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     # These tests call the real rickandmortyapi.com. A failure here can mean the
     # API is slow or down rather than a regression, so it reports without
     # failing the build. Check the logs before assuming the app is broken.
