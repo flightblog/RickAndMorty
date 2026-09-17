@@ -14,7 +14,9 @@ concurrency:
 env:
   PROJECT: RickAndMorty.xcodeproj
   SCHEME: RickAndMorty
-  DESTINATION: 'platform=iOS Simulator,name=iPhone 17,OS=26.0'
+  # No OS= pin: the runner image bumps patch versions (26.0 -> 26.0.1) and an
+  # exact match fails outright. 'latest' binds to whatever iOS 26.x is installed.
+  DESTINATION: 'platform=iOS Simulator,name=iPhone 17,OS=latest'
 
 jobs:
   unit-tests:
